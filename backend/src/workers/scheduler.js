@@ -10,7 +10,7 @@ export const messageQueue = new Queue('messages', { connection: redis });
  * - random: fires at a random interval (every 3–14 days)
  */
 export async function scheduleOccasion(occasion) {
-  const jobId = `occasion:${occasion.id}`;
+  const jobId = `occasion_${occasion.id}`;
 
   // Stagger send time ±3–8 minutes to prevent pattern detection
   const staggerMs = (Math.floor(Math.random() * 6) + 3) * 60 * 1000;
@@ -58,7 +58,7 @@ export async function scheduleOccasion(occasion) {
 }
 
 export async function cancelOccasion(occasionId) {
-  const jobId = `occasion:${occasionId}`;
+  const jobId = `occasion_${occasionId}`;
   const job = await messageQueue.getJob(jobId);
   if (job) await job.remove();
 }

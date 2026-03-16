@@ -328,7 +328,7 @@ function OccasionsTab({ contact }) {
       </ScrollView>
 
       {/* Add button */}
-      <TouchableOpacity style={styles.addOccasionBtn} onPress={() => setShowForm(true)}>
+      <TouchableOpacity style={styles.addOccasionBtn} onPress={() => { setType('birthday'); setDate(new Date()); setSendTime('08:00'); setDepth('medium'); setShowForm(true); }}>
         <Text style={styles.addOccasionText}>+ Add Schedule</Text>
       </TouchableOpacity>
 
