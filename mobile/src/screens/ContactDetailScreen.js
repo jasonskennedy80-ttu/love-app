@@ -210,6 +210,7 @@ function OccasionsTab({ contact }) {
   const [occasions, setOccasions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingOccasion, setEditingOccasion] = useState(null);
 
   // Form state
   const [type, setType] = useState('birthday');
@@ -220,6 +221,24 @@ function OccasionsTab({ contact }) {
   const [saving, setSaving] = useState(false);
 
   const needsDate = ['birthday', 'anniversary', 'holiday'].includes(type);
+
+  function openEdit(occ) {
+    setEditingOccasion(occ);
+    setType(occ.type);
+    setDate(occ.date ? new Date(occ.date + 'T12:00:00') : new Date());
+    setSendTime(occ.send_time?.slice(0, 5) || '08:00');
+    setDepth(occ.depth || 'medium');
+    setShowForm(true);
+  }
+
+  function openNew() {
+    setEditingOccasion(null);
+    setType('birthday');
+    setDate(new Date());
+    setSendTime('08:00');
+    setDepth('medium');
+    setShowForm(true);
+  }
 
   useEffect(() => { fetchOccasions(); }, []);
 
@@ -261,18 +280,21 @@ function OccasionsTab({ contact }) {
   async function handleSave() {
     setSaving(true);
     try {
+      const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       const payload = {
-        contact_id: contact.id,
         type,
         send_time: sendTime,
         depth,
-        active: true,
-        ...(needsDate && {
-          date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-        }),
+        ...(needsDate && { date: localDate }),
       };
-      const res = await client.post('/occasions', payload);
-      setOccasions((prev) => [res.data.occasion, ...prev]);
+
+      if (editingOccasion) {
+        const res = await client.patch(`/occasions/${editingOccasion.id}`, payload);
+        setOccasions((prev) => prev.map((o) => o.id === editingOccasion.id ? res.data.occasion : o));
+      } else {
+        const res = await client.post('/occasions', { ...payload, contact_id: contact.id, active: true });
+        setOccasions((prev) => [res.data.occasion, ...prev]);
+      }
       setShowForm(false);
     } catch (err) {
       Alert.alert('Error', err.response?.data?.error || 'Could not save occasion.');
@@ -300,16 +322,16 @@ function OccasionsTab({ contact }) {
             const info = typeInfo(occ.type);
             return (
               <View key={occ.id} style={styles.occasionCard}>
-                <View style={styles.occasionLeft}>
+                <TouchableOpacity style={styles.occasionLeft} onPress={() => openEdit(occ)}>
                   <Text style={styles.occasionEmoji}>{info.emoji}</Text>
                   <View>
                     <Text style={styles.occasionType}>{info.label}</Text>
                     <Text style={styles.occasionMeta}>
-                      {occ.date ? new Date(occ.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' : ''}
+                      {occ.date ? new Date(occ.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' : ''}
                       {occ.send_time?.slice(0, 5)} · {occ.depth}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
                 <View style={styles.occasionRight}>
                   <Switch
                     value={occ.active}
@@ -328,7 +350,7 @@ function OccasionsTab({ contact }) {
       </ScrollView>
 
       {/* Add button */}
-      <TouchableOpacity style={styles.addOccasionBtn} onPress={() => { setType('birthday'); setDate(new Date()); setSendTime('08:00'); setDepth('medium'); setShowForm(true); }}>
+      <TouchableOpacity style={styles.addOccasionBtn} onPress={openNew}>
         <Text style={styles.addOccasionText}>+ Add Schedule</Text>
       </TouchableOpacity>
 
@@ -339,7 +361,7 @@ function OccasionsTab({ contact }) {
             <TouchableOpacity onPress={() => setShowForm(false)}>
               <Text style={styles.modalCancel}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>New Schedule</Text>
+            <Text style={styles.modalTitle}>{editingOccasion ? 'Edit Schedule' : 'New Schedule'}</Text>
             <View style={{ width: 60 }} />
           </View>
 
@@ -420,7 +442,7 @@ function OccasionsTab({ contact }) {
           >
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.saveOccasionText}>Save Schedule</Text>}
+              : <Text style={styles.saveOccasionText}>{editingOccasion ? 'Update Schedule' : 'Save Schedule'}</Text>}
           </TouchableOpacity>
         </ScrollView>
       </Modal>
