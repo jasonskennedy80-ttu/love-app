@@ -8,6 +8,7 @@ import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import AddContactScreen from './src/screens/AddContactScreen';
 import ContactDetailScreen from './src/screens/ContactDetailScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -30,6 +31,7 @@ export default function App() {
               component={ContactDetailScreen}
               options={{ animation: 'slide_from_right' }}
             />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
           </>
         ) : (
           <>

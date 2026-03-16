@@ -35,6 +35,9 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Text style={styles.settingsIcon}>☰</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>love.app</Text>
         <TouchableOpacity
           style={styles.addBtn}
@@ -88,6 +91,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 40) + 8 : 16,
     paddingBottom: 12,
   },
+  settingsIcon: { fontSize: 22, color: '#888', padding: 4 },
   title: { fontSize: 28, fontWeight: '700', color: '#1A1A2E' },
   addBtn: {
     backgroundColor: '#E75480',
