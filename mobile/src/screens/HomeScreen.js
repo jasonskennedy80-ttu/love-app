@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, SafeAreaView,
+  StyleSheet, ActivityIndicator, SafeAreaView, StatusBar, Platform,
 } from 'react-native';
 import client from '../api/client';
 
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 40) + 8 : 16,
     paddingBottom: 12,
   },
   title: { fontSize: 28, fontWeight: '700', color: '#1A1A2E' },
