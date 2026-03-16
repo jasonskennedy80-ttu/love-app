@@ -16,7 +16,8 @@ function getClient() {
 // For now we enforce UTC-based quiet hours; Phase 4 adds timezone awareness.
 function isQuietHours() {
   const hour = new Date().getUTCHours();
-  return hour >= 1 || hour < 12; // 9pm–8am EST ≈ 1am–12pm UTC
+  // Block 9pm–8am CST = 2am–1pm UTC
+  return hour >= 2 && hour < 13;
 }
 
 /**

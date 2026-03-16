@@ -57,6 +57,8 @@ function MessagesTab({ contact }) {
   const [messages, setMessages] = useState([]);
   const [previewMsg, setPreviewMsg] = useState(null);
   const [generating, setGenerating] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [selectedDepth, setSelectedDepth] = useState('medium');
 
   useEffect(() => { fetchMessages(); }, []);
 
@@ -70,6 +72,7 @@ function MessagesTab({ contact }) {
   }
 
   async function generatePreview(depth) {
+    setSelectedDepth(depth);
     setGenerating(true);
     setPreviewMsg(null);
     try {
@@ -87,14 +90,43 @@ function MessagesTab({ contact }) {
     }
   }
 
+  async function sendNow() {
+    Alert.alert(
+      'Send this message?',
+      `This will text ${contact.name} right now.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send', onPress: async () => {
+            setSending(true);
+            try {
+              await client.post('/messages/send', {
+                contact_id: contact.id,
+                occasion_type: 'random',
+                depth: selectedDepth,
+              });
+              Alert.alert('Sent!', `Message delivered to ${contact.name}.`);
+              setPreviewMsg(null);
+              fetchMessages();
+            } catch (err) {
+              Alert.alert('Failed to send', err.response?.data?.error || 'Something went wrong.');
+            } finally {
+              setSending(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.body}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Generate a Message</Text>
         <View style={styles.depthRow}>
           {['light', 'medium', 'deep'].map((d) => (
-            <TouchableOpacity key={d} style={styles.depthBtn} onPress={() => generatePreview(d)} disabled={generating}>
-              <Text style={styles.depthBtnText}>{d.charAt(0).toUpperCase() + d.slice(1)}</Text>
+            <TouchableOpacity key={d} style={[styles.depthBtn, selectedDepth === d && styles.depthBtnActive]} onPress={() => generatePreview(d)} disabled={generating}>
+              <Text style={[styles.depthBtnText, selectedDepth === d && styles.depthBtnTextActive]}>{d.charAt(0).toUpperCase() + d.slice(1)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -107,9 +139,16 @@ function MessagesTab({ contact }) {
         {previewMsg && !generating && (
           <View style={styles.previewBubble}>
             <Text style={styles.previewText}>{previewMsg}</Text>
-            <TouchableOpacity onPress={() => generatePreview('medium')} style={styles.regenBtn}>
-              <Text style={styles.regenText}>↺ Regenerate</Text>
-            </TouchableOpacity>
+            <View style={styles.previewActions}>
+              <TouchableOpacity onPress={() => generatePreview(selectedDepth)} style={styles.regenBtn}>
+                <Text style={styles.regenText}>↺ Regenerate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={sendNow} style={styles.sendBtn} disabled={sending}>
+                {sending
+                  ? <ActivityIndicator color="#fff" size="small" />
+                  : <Text style={styles.sendBtnText}>Send Now →</Text>}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -504,8 +543,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#FFD6E0',
   },
   previewText: { fontSize: 16, color: '#1A1A2E', lineHeight: 24 },
-  regenBtn: { marginTop: 12, alignSelf: 'flex-end' },
+  previewActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
+  regenBtn: {},
   regenText: { color: '#E75480', fontSize: 13, fontWeight: '600' },
+  sendBtn: { backgroundColor: '#E75480', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 8 },
+  sendBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  depthBtnActive: { backgroundColor: '#FFF0F4', borderColor: '#E75480' },
+  depthBtnTextActive: { color: '#E75480' },
 
   emptyText: { color: '#aaa', fontSize: 14 },
   historyItem: {

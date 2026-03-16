@@ -3,6 +3,7 @@ import { z } from 'zod';
 import pool from '../db/pool.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateMessage } from '../services/claude.js';
+import { sendSMS } from '../services/twilio.js';
 
 const router = Router();
 
@@ -51,6 +52,60 @@ router.post('/preview', requireAuth, async (req, res, next) => {
     );
 
     res.json({ message: msg[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /messages/send — generate and send immediately via SMS
+router.post('/send', requireAuth, async (req, res, next) => {
+  try {
+    const schema = z.object({
+      contact_id: z.string().uuid(),
+      occasion_type: z.enum(['birthday', 'anniversary', 'holiday', 'daily', 'random']),
+      depth: z.enum(['light', 'medium', 'deep']).default('medium'),
+    });
+
+    const { contact_id, occasion_type, depth } = schema.parse(req.body);
+
+    const { rows } = await pool.query(
+      `SELECT c.*, i.hobbies, i.foods, i.dietary, i.memory_note
+       FROM contacts c
+       LEFT JOIN interests i ON i.contact_id = c.id
+       WHERE c.id = $1 AND c.user_id = $2`,
+      [contact_id, req.user.id]
+    );
+
+    if (!rows[0]) return res.status(404).json({ error: 'Contact not found' });
+
+    const contact = rows[0];
+    const interests = {
+      hobbies: contact.hobbies,
+      foods: contact.foods,
+      dietary: contact.dietary,
+      memory_note: contact.memory_note,
+    };
+
+    const body = await generateMessage(
+      { name: contact.name, relationship: contact.relationship, tone: contact.tone },
+      { type: occasion_type },
+      interests,
+      depth
+    );
+
+    const { rows: msg } = await pool.query(
+      `INSERT INTO messages (contact_id, body, status) VALUES ($1, $2, 'pending') RETURNING *`,
+      [contact_id, body]
+    );
+
+    await sendSMS(contact.phone, body);
+
+    const { rows: updated } = await pool.query(
+      `UPDATE messages SET status = 'sent', sent_at = NOW() WHERE id = $1 RETURNING *`,
+      [msg[0].id]
+    );
+
+    res.json({ message: updated[0] });
   } catch (err) {
     next(err);
   }
