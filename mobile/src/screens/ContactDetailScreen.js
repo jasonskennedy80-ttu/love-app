@@ -225,7 +225,7 @@ function OccasionsTab({ contact }) {
   function openEdit(occ) {
     setEditingOccasion(occ);
     setType(occ.type);
-    setDate(occ.date ? new Date(occ.date + 'T12:00:00') : new Date());
+    setDate(occ.date ? new Date(occ.date.split('T')[0] + 'T12:00:00') : new Date());
     setSendTime(occ.send_time?.slice(0, 5) || '08:00');
     setDepth(occ.depth || 'medium');
     setShowForm(true);
